@@ -1,0 +1,69 @@
+# data file for the Fltk User Interface Designer (fluid)
+version 1.0300 
+header_name {.h} 
+code_name {.cxx}
+class CubeMapChooser {open selected
+} {
+  Function {CubeMapChooser()} {open
+  } {
+    Fl_Window {} {open
+      xywh {523 187 399 374} type Single visible
+    } {
+      Fl_Group {} {
+        label {Load Cubemap} open
+        xywh {5 20 390 350}
+      } {
+        Fl_File_Input {} {
+          xywh {20 45 310 35}
+        }
+        Fl_Light_Button {} {
+          label {+X}
+          xywh {340 55 40 25}
+        }
+        Fl_File_Input {} {
+          xywh {20 91 310 35}
+        }
+        Fl_Light_Button {} {
+          label {-X}
+          xywh {340 101 40 25}
+        }
+        Fl_File_Input {} {
+          xywh {20 137 310 35}
+        }
+        Fl_Light_Button {} {
+          label {+Y}
+          xywh {340 147 40 25}
+        }
+        Fl_File_Input {} {
+          xywh {20 183 310 35}
+        }
+        Fl_Light_Button {} {
+          label {-Y}
+          xywh {340 193 40 25}
+        }
+        Fl_File_Input {} {
+          xywh {20 229 310 35}
+        }
+        Fl_Light_Button {} {
+          label {+Z}
+          xywh {340 239 40 25}
+        }
+        Fl_File_Input {} {
+          xywh {20 275 310 35}
+        }
+        Fl_Light_Button {} {
+          label {-Z}
+          xywh {340 285 40 25}
+        }
+        Fl_Button {} {
+          label Done
+          xywh {320 330 60 25}
+        }
+        Fl_Button {} {
+          label Cancel
+          xywh {250 330 60 25}
+        }
+      }
+    }
+  }
+} 
