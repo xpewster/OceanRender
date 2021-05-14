@@ -44,13 +44,17 @@ WaveScene::WaveScene(float t) {
 	// MaterialParameter ms(new TextureMap("../../../src/images/water.bmp"));
 	// water_mat.setSpecular(ms);
 
+	float _l[15] = {0.01, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05, 0.07, 0.075, 0.1, 0.1, 0.1, 0.2, 0.3, 0.4};
+	float _a[15] = {0.0015, 0.001, 0.001, 0.0025, 0.001, 0.001, 0.002, 0.002, 0.003, 0.003, 0.001, 0.004, 0.0015, 0.001, 0.004};
 
     glm::vec2 wind_dir = glm::vec2(glm::linearRand<float>(-1.0f, 1.0f), glm::linearRand<float>(-1.0f, 1.0f));
 	for(int i = 0; i < num_geometry_waves; i++){
-		float l = glm::linearRand<float>(l_bounds.x, l_bounds.y);
-		float a = abs(glm::gaussRand<float>(a_bounds.x, a_bounds.y));
+		float l = abs(glm::linearRand<float>(l_bounds.x, l_bounds.y));
+		float a = abs(glm::linearRand<float>(a_bounds.x, a_bounds.y));
+		// float l = _l[i];
+		// float a = _a[i];
 		float s = glm::linearRand<float>(s_bounds.x, s_bounds.y);
-		glm::vec2 dir = glm::normalize(wind_dir + glm::vec2(glm::gaussRand<float>(0.0f, 0.25f), glm::gaussRand<float>(0.0f, 0.25f)));
+		glm::vec2 dir = glm::normalize(wind_dir + glm::vec2(glm::linearRand<float>(-0.1f, 0.1f), glm::linearRand<float>(-0.1f, 0.1f)));
 		Wave w(l, a, s, dir);
 		waves.push_back(w);
 		combined_waves.push_back(w);

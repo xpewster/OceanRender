@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/norm.hpp>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -25,6 +26,16 @@ public:
 };
 
 template<typename T>
+struct cone_filter_data{
+public:
+    T* data;
+    float distance;
+
+    cone_filter_data(T* data, float distance) :
+        data(data), distance(distance) {}
+};
+
+template<typename T>
 class Kd_tree{
 public:
     Kd_tree();
@@ -39,7 +50,7 @@ public:
     }
 
     T find(glm::vec4 location) {return NULL;}
-    void find_square(std::vector<T*>& result, glm::vec3 center, float w){
+    void find_square(std::vector<cone_filter_data<T>>& result, glm::vec3 center, float w){
         find_square_helper({center, w, w, w}, result, root, {glm::vec3(0.0), bound, bound, bound}, 0);
     }
 
@@ -94,7 +105,7 @@ private:
         return &nodes[mid];
     }
 
-    void find_square_helper(prism rect, std::vector<T*>& found, Kd_node<T>* curr, prism cell, int cur_depth){
+    void find_square_helper(prism rect, std::vector<cone_filter_data<T>>& found, Kd_node<T>* curr, prism cell, int cur_depth){
         
         if (curr == nullptr)
             return;
@@ -105,13 +116,14 @@ private:
         }
         if (rect.contains(cell)){
             // std::cout << "contains_all!\n";
-            add_all_below(found, curr);
+            add_all_below(rect, found, curr);
         }
         else {
     
             if (rect.contains(curr->location)){
                 // std::cout << "contains!\n";
-                found.push_back(&curr->data);
+                cone_filter_data<T> d(&curr->data, glm::distance2(curr->location, rect.center));
+                found.push_back(d);
             }
 
             if (curr->left != nullptr || curr->right != nullptr){
@@ -150,14 +162,15 @@ private:
         }
     }
 
-    void add_all_below(std::vector<T*>& vec, Kd_node<T>* curr){
+    void add_all_below(prism rect, std::vector<cone_filter_data<T>>& vec, Kd_node<T>* curr){
         if (curr == nullptr)
             return;
         
-        vec.push_back(&curr->data);
+        cone_filter_data<T> d(&curr->data, glm::distance2(curr->location, rect.center));
+        vec.push_back(d);
 
-        add_all_below(vec, curr->left);
-        add_all_below(vec, curr->right);
+        add_all_below(rect, vec, curr->left);
+        add_all_below(rect, vec, curr->right);
     }
 
 

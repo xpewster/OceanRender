@@ -7,7 +7,7 @@
 #include <glm/gtc/constants.hpp>
 #include "kd_tree.h"
 
-const int photon_resolution = 500;
+const int photon_resolution = 100;
 
 struct Photon{
     glm::dvec3 location;
