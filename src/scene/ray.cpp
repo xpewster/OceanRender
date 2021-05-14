@@ -12,11 +12,13 @@ const Material& isect::getMaterial() const
 ray::ray(const glm::dvec3& pp,
 	 const glm::dvec3& dd,
 	 const glm::dvec3& w,
-         RayType tt)
-        : p(pp), d(dd), atten(w), t(tt), underwater(true)
+         RayType tt, bool uw)
+        : p(pp), d(dd), atten(w), t(tt), underwater(uw)
 {
 	TraceUI::addRay(ray_thread_id);
 }
+
+
 
 ray::ray(const ray& other) : p(other.p), d(other.d), atten(other.atten)
 {

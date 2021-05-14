@@ -687,16 +687,17 @@ GraphicalUI::GraphicalUI() : refreshInterval(10) {
 	//D:/Projects/Graphics/ray/build/bin/Release/images/Daylight Box_Right_posx.bmp
 	try {
 		cubeFace[0].reset(new TextureMap("../../../src/images/Daylight Box_Right_posx.bmp"));
+		cubeFace[1].reset(new TextureMap("../../../src/images/Daylight Box_Left_negx.bmp"));
+		cubeFace[2].reset(new TextureMap("../../../src/images/Daylight Box_Top_posy.bmp"));
+		cubeFace[3].reset(new TextureMap("../../../src/images/Daylight Box_Bottom_negy.bmp"));
+		cubeFace[4].reset(new TextureMap("../../../src/images/Daylight Box_Front_posz.bmp"));
+		cubeFace[5].reset(new TextureMap("../../../src/images/Daylight Box_Back_negz.bmp"));
 	} catch (TextureMapException &xcpt) {
 		std::cerr << xcpt.message() << std::endl;
 		std::string msg("Error: could not open file: ");
 		msg.append("../../../src/images/Daylight Box_Right_posx.bmp");
 	}
-	cubeFace[1].reset(new TextureMap("../../../src/images/Daylight Box_Left_negx.bmp"));
-	cubeFace[2].reset(new TextureMap("../../../src/images/Daylight Box_Top_posy.bmp"));
-	cubeFace[3].reset(new TextureMap("../../../src/images/Daylight Box_Bottom_negy.bmp"));
-	cubeFace[4].reset(new TextureMap("../../../src/images/Daylight Box_Front_posz.bmp"));
-	cubeFace[5].reset(new TextureMap("../../../src/images/Daylight Box_Back_negz.bmp"));
+	
 
 	if (!getCubeMap()) {
 		setCubeMap(new CubeMap());

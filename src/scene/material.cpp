@@ -56,11 +56,7 @@ glm::dvec3 Material::shade(Scene* scene, const ray& r, const isect& i) const
 		glm::dvec3 specular = ks(i)*pow(max(glm::dot(glm::reflect(pl->getDirection(r.at(i.getT())), i.getN()), r.getDirection()), 0.0), shininess(i));
 		it += atten*pl->getColor()*(diffuse + specular);
 	}
-	if (r.isUnderwater()){
-		double time_uw = i.getT();
-		//atten *= time_uw/1.0 * glm::dvec3(0, 0.12, 0.3);
-		it = it * (1.0f - time_uw) + water::water_deep_color*time_uw;
-	}
+	
 
 	return it;
 }
@@ -76,6 +72,13 @@ TextureMap::TextureMap(string filename)
 		error.append("'.");
 		throw TextureMapException(error);
 	}
+}
+
+double epsilon_floor(double d){
+	double f = floor(d);
+	if ((f+1) - d < RAY_EPSILON)
+		return f+1;
+	return f;
 }
 
 glm::dvec3 TextureMap::getMappedValue(const glm::dvec2& coord) const
@@ -96,9 +99,9 @@ glm::dvec3 TextureMap::getMappedValue(const glm::dvec2& coord) const
 	double v = coord.y *h -1.0;
 
 	// double sx = 0.0000001;
-	double fu =  floor(u) ;
+	double fu =  epsilon_floor(u) ;
 	double cu = fu +1.0 ;
-	double fv =  floor(v) ;
+	double fv =  epsilon_floor(v) ;
 	double cv =  fv + 1.0 ;
 
 

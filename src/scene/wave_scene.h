@@ -19,9 +19,14 @@ public:
 
     WaveScene(float t);
 
+    glm::dvec3 normal(glm::vec2 pos);
+
     Scene* getScene() {return scene;}
 
 private:
+
+    float _t;
+
     /* Water */
 	std::vector<glm::vec4> water_vertices;
 	std::vector<glm::vec4> water_normals;

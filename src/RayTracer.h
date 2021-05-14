@@ -7,10 +7,13 @@
 
 #include <time.h>
 #include <glm/vec3.hpp>
+#include <glm/gtc/random.hpp>
 #include <queue>
 #include <thread>
 #include "scene/cubeMap.h"
 #include "scene/ray.h"
+#include "scene/photon_map.h"
+#include "scene/wave_scene.h"
 #include <mutex>
 
 class Scene;
@@ -58,6 +61,9 @@ public:
 private:
 	glm::dvec3 trace(double x, double y);
 
+	void simulate_photon(Photon& p, int depth);
+	bool will_exit(glm::dvec3 direction, glm::dvec3 location);
+
 	std::vector<unsigned char> buffer;
 	int buffer_width, buffer_height;
 	int bufferSize;
@@ -66,7 +72,11 @@ private:
 	double thresh;
 	double aaThresh;
 	int samples;
-	std::unique_ptr<Scene> scene;
+	std::shared_ptr<Scene> scene;
+
+	WaveScene ws;
+	PhotonMap caustics_map;
+	PhotonMap ss_map;
 
 	bool m_bBufferReady;
 

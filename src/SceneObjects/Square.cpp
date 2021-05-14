@@ -1,4 +1,6 @@
 #include <cmath>
+#include <iostream>
+#include <glm/gtx/string_cast.hpp>
 
 #include "Square.h"
 
@@ -19,6 +21,10 @@ bool Square::intersectLocal(ray& r, isect& i) const
 
 	if( t <= RAY_EPSILON ) {
 		return false;
+	}
+
+	if (std::isnan(t)){
+		std::cout << "BAD T!\n" << t << std::endl << glm::to_string(p) << std::endl << glm::to_string(d) << std::endl;
 	}
 
 	glm::dvec3 P = r.at( t );

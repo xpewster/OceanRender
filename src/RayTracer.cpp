@@ -6,7 +6,7 @@
 #include "scene/light.h"
 #include "scene/material.h"
 #include "scene/ray.h"
-#include "scene/wave_scene.h"
+#include "scene/water_constant.h"
 
 #include "parser/Tokenizer.h"
 #include "parser/Parser.h"
@@ -21,7 +21,6 @@
 #include <iostream>
 #include <fstream>
 
-#include "scene/water_constant.h"
 
 using namespace std;
 extern TraceUI* traceUI;
@@ -95,12 +94,16 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 		// rays.
 
 		//cout << "recursion depth: " << depth << "\n";	
+
+		if (std::isnan(i.getT()))
+			std::cout << "BAD T!\n" << i.getN() << std::endl; 
 		
 		const Material& m = i.getMaterial();
 		colorC = m.shade(scene.get(), r, i);
 
-		if (m.kt(i) == glm::dvec3(1.0, 1.0, 1.0)){
-			r.setUnderwater(!r.isUnderwater());
+		if (r.isUnderwater()){
+			float radiance = caustics_map.get_radiance_square(r.at(i.getT()), 1.0f/(photon_resolution));
+			colorC += glm::vec3(1)*pow(radiance, 1.0f);
 		}
 
 		if (depth < traceUI->getDepth()){
@@ -108,13 +111,14 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 			ray r2(r.at(i.getT()), glm::normalize(glm::reflect<3, double>(r.getDirection(), i.getN())), glm::dvec3(1,1,1), ray::REFLECTION);
 			
 			double dummy;
-			colorC += m.kr(i)*traceRay(r2, thresh, depth+1, dummy);
+			if (glm::length(m.kr(i)) > 0)
+				colorC += m.kr(i)*traceRay(r2, thresh, depth+1, dummy);
 
 			/* Refraction */
 			if (glm::length(m.kt(i)) > 0){
 				double n_i, n_t;
 				glm::dvec3 norm = i.getN();
-				if (glm::dot(r.getDirection(), i.getN()) < 0){
+				if (glm::dot(r.getDirection(), i.getN()) <= 0){
 					n_i = 1.0;
 					n_t = m.index(i);
 				}
@@ -123,11 +127,42 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 					n_i = m.index(i);
 					n_t = 1.0;
 				}
-				ray r3(r.at(i.getT()), glm::normalize(glm::refract(r.getDirection(), norm, n_i/n_t)), glm::dvec3(1,1,1), ray::REFRACTION);
-				if (glm::dot(r.getDirection(), r3.getDirection()) != 0.0){ // not total internal reflection
+				
+				double cosine = glm::dot(norm, r.getDirection());
+				double root = 1.0 - (n_i/n_t)*(n_i/n_t)*(1.0 - cosine*cosine);
+				if (root >= 0){ // not total internal reflection
+					glm::dvec3 dir = glm::normalize(
+							((n_i/n_t)*cosine - sqrt(root))*norm
+							-(n_i/n_t)*r.getDirection());
+					//std::cout << glm::to_string(r.getDirection()) << ", " << glm::to_string(dir) << "| " << glm::to_string(i.getN()) << ", " << (n_i/n_t) << std::endl;
+					ray r3(r.at(i.getT()), dir, glm::dvec3(1,1,1), ray::REFRACTION, false);
+					// if (std::isnan(glm::normalize(glm::refract(r.getDirection(), norm, n_i/n_t))[0])){
+					// 	glm::dvec3 asdf = glm::normalize(glm::refract(r.getDirection(), norm, n_i/n_t));
+					// }
 					colorC += m.kt(i)*traceRay(r3, thresh, depth+1, dummy);
 				}
+				// glm::dvec3 dir = glm::refract(r.getDirection(), norm, n_i/n_t);
+				// if (dir != glm::dvec3(0))
+				// 	dir = normalize(dir);
+	
+				// ray r3(r.at(i.getT()), dir, glm::dvec3(1,1,1), ray::REFRACTION);
+				// if (glm::dot(r.getDirection(), r3.getDirection()) != 0.0){ // not total internal reflection
+				// 	colorC += m.kt(i)*traceRay(r3, thresh, depth+1, dummy);
+				// }
+				else { //TIR
+					ray r4(r.at(i.getT()), glm::normalize(glm::reflect<3, double>(r.getDirection(), i.getN())), glm::dvec3(1,1,1), ray::REFRACTION);
+					colorC += m.kt(i)*traceRay(r4, thresh, depth+1, dummy);
+				}
 			}
+		}
+
+		if (r.isUnderwater()){
+			double time_uw = i.getT();
+			//atten *= time_uw/1.0 * glm::dvec3(0, 0.12, 0.3);
+			if (time_uw > water::water_size)
+				colorC = water::water_deep_color;
+			else
+				colorC = colorC * (1.0 - (time_uw/water::water_size)) + water::water_deep_color*(time_uw/water::water_size);
 		}
 	} else {
 		// No intersection.  This ray travels to infinity, so we color
@@ -155,7 +190,7 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 }
 
 RayTracer::RayTracer()
-	: scene(nullptr), buffer(0), thresh(0), buffer_width(0), buffer_height(0), m_bBufferReady(false)
+	: scene(nullptr), buffer(0), thresh(0), buffer_width(0), buffer_height(0), m_bBufferReady(false), ws(0.0)
 {
 }
 
@@ -177,7 +212,6 @@ double RayTracer::aspectRatio()
 
 bool RayTracer::loadScene(const char* fn)
 {
-	WaveScene ws(0.0);
 	scene.reset(ws.getScene());
 	// ifstream ifs(fn);
 	// if( !ifs ) {
@@ -245,6 +279,102 @@ void RayTracer::traceSetup(int w, int h)
 
 	// YOUR CODE HERE
 	// FIXME: Additional initializations
+	
+	glm::dvec3 center = {0.0, water::sea_level+1.0, water::water_size/-2.0};
+	glm::dvec3 direction = glm::normalize(-1.0*center);
+	for(int x = 0; x < photon_resolution; x++){
+		for(int z = 0; z < photon_resolution; z++){
+			glm::dvec3 loc = glm::vec3(center.x - water::water_size/2.0 + x*(water::water_size/(photon_resolution-1)), center.y, 
+										center.z - water::water_size/2.0 + z*(water::water_size/(photon_resolution-1)));
+			Photon p(loc, direction, 1.0f);
+			simulate_photon(p, 1);
+		}
+	}
+	std::cout << "---------------------------------------------------------" << std::endl;
+	std::cout << "SCATTERING: " << std::endl;
+	std::cout << "---------------------------------------------------------" << std::endl;
+	ss_map.update_kd();
+	std::cout << "---------------------------------------------------------" << std::endl;
+	std::cout << "CAUSTICS: " << std::endl;
+	std::cout << "---------------------------------------------------------" << std::endl;
+	caustics_map.update_kd();
+}
+
+void RayTracer::simulate_photon(Photon& p, int depth){
+
+	if (depth < 0 || p.strength < 0.0001)
+		return;
+
+	double start_height = p.location.y - water::sea_level;
+
+	if (start_height > 0 && p.direction.y < 0) { // approx. sun photon
+		glm::dvec3 path = glm::dvec3(p.direction) * -1.0*(start_height/p.direction.y);
+		glm::dvec3 waterhit_coords = glm::dvec3(p.location) + path;
+
+		glm::dvec3 normal = ws.normal(glm::vec2(waterhit_coords.x, waterhit_coords.z));
+
+		/* ABSORB: 0.1,   REFRACT: 0.9 */
+		double n_i = 1.0;
+		double n_t = water::water_index;
+		double cosine = glm::dot(normal, p.direction);
+		double root = 1.0 - (n_i/n_t)*(n_i/n_t)*(1.0 - cosine*cosine);
+		if (root >= 0){ // not total internal reflection
+			glm::vec3 dir = glm::normalize(
+					((n_i/n_t)*cosine - sqrt(root))*normal
+					-(n_i/n_t)*p.direction);
+			Photon p2(waterhit_coords, dir, p.strength*0.9);
+			//std::cout << glm::to_string(p.direction) << ", " << glm::to_string(path) << std::endl;
+			simulate_photon(p2, depth-1);
+		}
+		else { //TIR
+			// Photon p2(waterhit_coords, glm::normalize(glm::reflect<3, double>(p.direction, normal)), p.strength*0.1);
+			// simulate_photon(p2, depth-1);
+		}
+		
+	}
+	else if (start_height > 0 && p.direction.y > 0) { // approx. exited photon
+		return;
+	}
+	else if (start_height <= 0 && p.direction.y > 0 && will_exit(p.direction, p.location)) { // approx. exiting photon
+		return; // maybe add scatter
+	}
+	else { // approx. scattering/caustic photon
+		double step_size = 0.01;
+		// std::cout << glm::to_string(p.location) << std::endl;
+		while(p.location.x > water::water_size/-2.0 && p.location.x < water::water_size/2.0 && p.location.z > water::water_size/-2.0 && p.location.z < water::water_size/2.0){
+			if (p.location.y > water::seafloor_level){ // scatter
+				double r = glm::linearRand<double>(0,1);
+				if (r > 0.5){ 
+					Photon p2(p.location + (step_size*2.0*(r-0.5))*p.direction, glm::vec3(0), p.strength*0.01*r);
+					ss_map.add_photon(p2);
+					simulate_photon(p2, depth-1);
+				}
+			}
+			else { // caustic
+				Photon p2(glm::vec3(p.location.x, water::seafloor_level, p.location.z), glm::vec3(0), p.strength*0.7);
+				caustics_map.add_photon(p2);
+			}
+			p.location += step_size*p.direction;
+			//std::cout << glm::to_string(p.location) << std::endl;
+		}
+	}
+}
+
+bool RayTracer::will_exit(glm::dvec3 direction, glm::dvec3 location){
+	if (direction.y > 0) {
+		double x_exit = ((water::sea_level-location.y)/direction.y)*direction.x;
+		double z_exit = ((water::sea_level-location.y)/direction.y)*direction.z;
+		return (x_exit < water::water_size/-2.0 || x_exit > water::water_size/2.0 
+				|| z_exit < water::water_size/-2.0 || z_exit < water::water_size/2.0);
+	}
+	else {
+		double x_exit = ((water::seafloor_level-location.y)/direction.y)*direction.x;
+		double z_exit = ((water::seafloor_level-location.y)/direction.y)*direction.z;
+		return (x_exit < water::water_size/-2.0 || x_exit > water::water_size/2.0 
+				|| z_exit < water::water_size/-2.0 || z_exit < water::water_size/2.0);
+	}
+
+	
 }
 
 /*

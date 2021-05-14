@@ -26,6 +26,8 @@ class Trimesh : public MaterialSceneObject {
 	Faces faces;
 	Normals normals;
 	Materials materials;
+
+	std::unique_ptr<KdTree<TrimeshFace>> kdtree;
 	BoundingBox localBounds;
 
 public:
@@ -55,6 +57,8 @@ public:
 	void generateNormals();
 
 	bool hasBoundingBoxCapability() const { return true; }
+
+	void buildKdTree();
 
 	BoundingBox ComputeLocalBoundingBox()
 	{
@@ -150,5 +154,6 @@ public:
 
 	const BoundingBox &getBoundingBox() const { return localbounds; }
 };
+
 
 #endif // TRIMESH_H__
