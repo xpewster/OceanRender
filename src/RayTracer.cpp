@@ -102,8 +102,11 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 		colorC = m.shade(scene.get(), r, i);
 
 		if (r.isUnderwater()){
-			float radiance = caustics_map.get_radiance_square(r.at(i.getT()), 1.0f/(photon_resolution));
-			colorC += glm::vec3(1)*pow(radiance, 1.0f);
+			float radiance = caustics_map.get_radiance_square(r.at(i.getT()), 0.01f); 
+			colorC += glm::vec3(1)*(pow(std::min(10.0f*radiance, 1.0f)+0.5f, 2.0f)-0.5f);
+			//draw photons:
+			// float p_radiance = caustics_map.get_radiance_square(r.at(i.getT()), 0.0005); 
+			// colorC += glm::vec3(1.0,0.0,0.0)*pow(p_radiance*100.0f*photon_resolution, 1.0f);
 		}
 
 		if (depth < traceUI->getDepth()){
@@ -162,7 +165,16 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 			if (time_uw > water::water_size)
 				colorC = water::water_deep_color;
 			else
-				colorC = colorC * (1.0 - (time_uw/water::water_size)) + water::water_deep_color*(time_uw/water::water_size);
+				colorC = colorC * (1.0 - (time_uw/water::water_size)*(time_uw/water::water_size)) + water::water_deep_color*(time_uw/water::water_size)*(time_uw/water::water_size);
+
+			double step_size = 0.005;
+			float ss_radiance = 0.0f;
+			// for(double _t = 0; (r.at(_t).x > water::water_size/-2.0f && r.at(_t).x < water::water_size/2.0f 
+			// 				&& r.at(_t).z > water::water_size/-2.0f && r.at(_t).z < water::water_size/2.0f) ; _t += step_size){
+			for(double _t = 0; _t < i.getT(); _t += step_size){
+				ss_radiance += ss_map.get_radiance_rect(r.at(_t), 0.005f, 0.05f, 0.005f) * _t/water::water_size;
+			}
+			colorC += glm::vec3(1)*0.15f*std::min(std::max(pow(std::min(10000.0f*ss_radiance, 1.0f)+0.5f, 1.0f)-0.5f, 0.0f), 1.0f);
 		}
 	} else {
 		// No intersection.  This ray travels to infinity, so we color
@@ -174,8 +186,15 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 		//       Check traceUI->cubeMap() to see if cubeMap is loaded
 		//       and enabled.
 		if	(traceUI->cubeMap()) {
-			if (r.isUnderwater())
+			if (r.isUnderwater()){
 				colorC = water::water_deep_color;
+				double step_size = 0.005;
+				float ss_radiance = 0.0f;
+				for(double _t = 0; _t < water::water_size; _t += step_size){
+					ss_radiance += ss_map.get_radiance_rect(r.at(_t), 0.005f, 0.05f, 0.005f) * _t/water::water_size;
+				}
+				colorC += glm::vec3(1)*0.15f*std::min(std::max(pow(std::min(10000.0f*ss_radiance, 1.0f)+0.5f, 1.0f)-0.5f, 0.0f), 1.0f);
+			}
 			else
 				colorC = traceUI->getCubeMap()->getColor(r);
 		}
@@ -280,27 +299,31 @@ void RayTracer::traceSetup(int w, int h)
 	// YOUR CODE HERE
 	// FIXME: Additional initializations
 	
-	glm::dvec3 center = {0.0, water::sea_level+1.0, water::water_size/-2.0};
+	glm::dvec3 center = {0.0, water::sea_level+1.0, water::water_size/2.0};
 	glm::dvec3 direction = glm::normalize(-1.0*center);
 	for(int x = 0; x < photon_resolution; x++){
 		for(int z = 0; z < photon_resolution; z++){
-			glm::dvec3 loc = glm::vec3(center.x - water::water_size/2.0 + x*(water::water_size/(photon_resolution-1)), center.y, 
-										center.z - water::water_size/2.0 + z*(water::water_size/(photon_resolution-1)));
+			double jitterx = glm::linearRand<double>(water::water_size/-photon_resolution,water::water_size/photon_resolution);
+			double jitterz = glm::linearRand<double>(water::water_size/-photon_resolution,water::water_size/photon_resolution);
+			glm::dvec3 loc = glm::vec3(center.x - water::water_size/2.0 + x*(water::water_size/(photon_resolution-1)) + jitterx, center.y, 
+										center.z - water::water_size/2.0 + z*(water::water_size/(photon_resolution-1)) + jitterz);
 			Photon p(loc, direction, 1.0f);
-			simulate_photon(p, 1);
+			simulate_photon(p, 1, true);
 		}
 	}
 	std::cout << "---------------------------------------------------------" << std::endl;
 	std::cout << "SCATTERING: " << std::endl;
 	std::cout << "---------------------------------------------------------" << std::endl;
 	ss_map.update_kd();
+	// hack_ss_buffer.resize(buffer_width*buffer_height);
+	// std::fill(hack_ss_buffer.begin(), hack_ss_buffer.end(), nullptr);
 	std::cout << "---------------------------------------------------------" << std::endl;
 	std::cout << "CAUSTICS: " << std::endl;
 	std::cout << "---------------------------------------------------------" << std::endl;
 	caustics_map.update_kd();
 }
 
-void RayTracer::simulate_photon(Photon& p, int depth){
+void RayTracer::simulate_photon(Photon& p, int depth, bool flag){
 
 	if (depth < 0 || p.strength < 0.0001)
 		return;
@@ -324,11 +347,11 @@ void RayTracer::simulate_photon(Photon& p, int depth){
 					-(n_i/n_t)*p.direction);
 			Photon p2(waterhit_coords, dir, p.strength*0.9);
 			//std::cout << glm::to_string(p.direction) << ", " << glm::to_string(path) << std::endl;
-			simulate_photon(p2, depth-1);
+			simulate_photon(p2, depth-1, flag);
 		}
 		else { //TIR
-			// Photon p2(waterhit_coords, glm::normalize(glm::reflect<3, double>(p.direction, normal)), p.strength*0.1);
-			// simulate_photon(p2, depth-1);
+			Photon p2(waterhit_coords, glm::normalize(glm::reflect<3, double>(p.direction, normal)), p.strength*0.1);
+			simulate_photon(p2, depth-1, false);
 		}
 		
 	}
@@ -343,14 +366,18 @@ void RayTracer::simulate_photon(Photon& p, int depth){
 		// std::cout << glm::to_string(p.location) << std::endl;
 		while(p.location.x > water::water_size/-2.0 && p.location.x < water::water_size/2.0 && p.location.z > water::water_size/-2.0 && p.location.z < water::water_size/2.0){
 			if (p.location.y > water::seafloor_level){ // scatter
-				double r = glm::linearRand<double>(0,1);
-				if (r > 0.5){ 
-					Photon p2(p.location + (step_size*2.0*(r-0.5))*p.direction, glm::vec3(0), p.strength*0.01*r);
+				double dep = (p.location.y-water::seafloor_level)/(water::sea_level-water::seafloor_level);
+				double scat = glm::linearRand<double>(0,1);
+				if (scat < pow(dep, 2.0)){
+					double r = glm::linearRand<double>(0,1);
+					Photon p2(p.location + (step_size*r)*p.direction, glm::vec3(0), p.strength*0.01*r);
 					ss_map.add_photon(p2);
-					simulate_photon(p2, depth-1);
+					// glm::dvec3 ray = ((p.location + (step_size*2.0*(r-0.5))*p.direction) - scene->getCamera().getEye();
+
+					simulate_photon(p2, depth-1, false);
 				}
 			}
-			else { // caustic
+			else if (flag){ // caustic
 				Photon p2(glm::vec3(p.location.x, water::seafloor_level, p.location.z), glm::vec3(0), p.strength*0.7);
 				caustics_map.add_photon(p2);
 			}

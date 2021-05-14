@@ -3,6 +3,7 @@
 
 #include "split.h"
 #include "3d_rect.h"
+#include "ray.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -53,6 +54,12 @@ public:
     void find_square(std::vector<cone_filter_data<T>>& result, glm::vec3 center, float w){
         find_square_helper({center, w, w, w}, result, root, {glm::vec3(0.0), bound, bound, bound}, 0);
     }
+    void find_rect(std::vector<cone_filter_data<T>>& result, glm::vec3 center, float w, float h, float d){
+        find_square_helper({center, w, h, d}, result, root, {glm::vec3(0.0), bound, bound, bound}, 0);
+    }
+    // void find_ray(std::vector<cone_filter_data<T>>& result, ray& r){
+    //     find_ray_helper({center, w, h, d}, result, root, {glm::vec3(0.0), bound, bound, bound}, 0);
+    // }
 
     void clear(){
         root = nullptr;
@@ -172,6 +179,7 @@ private:
         add_all_below(rect, vec, curr->left);
         add_all_below(rect, vec, curr->right);
     }
+
 
 
 

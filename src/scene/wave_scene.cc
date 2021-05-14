@@ -48,13 +48,32 @@ WaveScene::WaveScene(float t) {
 	float _a[15] = {0.0015, 0.001, 0.001, 0.0025, 0.001, 0.001, 0.002, 0.002, 0.003, 0.003, 0.001, 0.004, 0.0015, 0.001, 0.004};
 
     glm::vec2 wind_dir = glm::vec2(glm::linearRand<float>(-1.0f, 1.0f), glm::linearRand<float>(-1.0f, 1.0f));
-	for(int i = 0; i < num_geometry_waves; i++){
+
+	float f_l = abs(glm::linearRand<float>(0.05, 0.3));
+	float f_a = abs(glm::linearRand<float>(0.0015, 0.003));
+	float f_s = glm::linearRand<float>(0.5, 0.3);
+	glm::vec2 f_dir = glm::normalize(wind_dir);
+	Wave f_w(f_l, f_a, f_s, f_dir);
+	waves.push_back(f_w);
+	combined_waves.push_back(f_w);
+	for(int i = 0; i < num_geometry_waves-1; i++){
 		float l = abs(glm::linearRand<float>(l_bounds.x, l_bounds.y));
 		float a = abs(glm::linearRand<float>(a_bounds.x, a_bounds.y));
 		// float l = _l[i];
 		// float a = _a[i];
 		float s = glm::linearRand<float>(s_bounds.x, s_bounds.y);
-		glm::vec2 dir = glm::normalize(wind_dir + glm::vec2(glm::linearRand<float>(-0.1f, 0.1f), glm::linearRand<float>(-0.1f, 0.1f)));
+		glm::vec2 dir = glm::normalize(wind_dir + glm::vec2(glm::linearRand<float>(-water_variance, water_variance), glm::linearRand<float>(-water_variance, water_variance)));
+		Wave w(l, a, s, dir);
+		waves.push_back(w);
+		combined_waves.push_back(w);
+	}
+	for(int i = 0; i < num_sgeometry_waves-1; i++){
+		float l = abs(glm::linearRand<float>(s_l_bounds.x, s_l_bounds.y));
+		float a = abs(glm::linearRand<float>(s_a_bounds.x, s_a_bounds.y));
+		// float l = _l[i];
+		// float a = _a[i];
+		float s = glm::linearRand<float>(s_bounds.x, s_bounds.y);
+		glm::vec2 dir = glm::normalize(wind_dir + glm::vec2(glm::linearRand<float>(-water_variance, water_variance), glm::linearRand<float>(-water_variance, water_variance)));
 		Wave w(l, a, s, dir);
 		waves.push_back(w);
 		combined_waves.push_back(w);

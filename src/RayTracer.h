@@ -61,7 +61,7 @@ public:
 private:
 	glm::dvec3 trace(double x, double y);
 
-	void simulate_photon(Photon& p, int depth);
+	void simulate_photon(Photon& p, int depth, bool flag);
 	bool will_exit(glm::dvec3 direction, glm::dvec3 location);
 
 	std::vector<unsigned char> buffer;
@@ -77,6 +77,7 @@ private:
 	WaveScene ws;
 	PhotonMap caustics_map;
 	PhotonMap ss_map;
+	std::vector<std::vector<Photon>> hack_ss_buffer;
 
 	bool m_bBufferReady;
 

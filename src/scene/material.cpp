@@ -75,10 +75,11 @@ TextureMap::TextureMap(string filename)
 }
 
 double epsilon_floor(double d){
-	double f = floor(d);
-	if ((f+1) - d < RAY_EPSILON)
-		return f+1;
-	return f;
+	// double f = floor(d);
+	// if ((f+1) - d < RAY_EPSILON)
+	// 	return f+1;
+	// return f;
+	return (d > -0.5 && d < 0) ? 0 : floor(d);
 }
 
 glm::dvec3 TextureMap::getMappedValue(const glm::dvec2& coord) const

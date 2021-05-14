@@ -36,6 +36,7 @@ public:
     void update_kd();
 
     float get_radiance_square(glm::dvec3 center, float w);
+    float get_radiance_rect(glm::dvec3 center, float w, float h, float d);
 
 private:
     Kd_tree<Photon>* kd;
