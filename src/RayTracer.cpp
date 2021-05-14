@@ -103,7 +103,7 @@ glm::dvec3 RayTracer::traceRay(ray& r, const glm::dvec3& thresh, int depth, doub
 
 		if (r.isUnderwater()){
 			float radiance = caustics_map.get_radiance_square(r.at(i.getT()), 0.01f); 
-			colorC += glm::vec3(1)*(pow(std::min(10.0f*radiance, 1.0f)+0.5f, 2.0f)-0.5f);
+			colorC += glm::vec3(1)*(pow(std::min(85.0f*radiance, 1.0f)+0.5f, 2.0f)-0.5f);
 			//draw photons:
 			// float p_radiance = caustics_map.get_radiance_square(r.at(i.getT()), 0.0005); 
 			// colorC += glm::vec3(1.0,0.0,0.0)*pow(p_radiance*100.0f*photon_resolution, 1.0f);
